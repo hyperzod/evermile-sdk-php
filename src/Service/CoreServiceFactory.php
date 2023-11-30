@@ -4,7 +4,7 @@ namespace Hyperzod\EvermileSdkPhp\Service;
 
 /**
  * Service factory class for API resources in the root namespace.
- * @property JobService $jobService
+ * @property QuoteService $QuoteService
  */
 class CoreServiceFactory extends AbstractServiceFactory
 {
@@ -12,7 +12,8 @@ class CoreServiceFactory extends AbstractServiceFactory
      * @var array<string, string>
      */
     private static $classMap = [
-        'job' => JobService::class,
+        'quote' => QuoteService::class,
+        'order' => OrderService::class,
     ];
 
     protected function getServiceClass($name)

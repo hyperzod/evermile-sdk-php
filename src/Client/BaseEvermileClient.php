@@ -16,14 +16,16 @@ class BaseEvermileClient implements EvermileClientInterface
     * Initializes a new instance of the {@link BaseEvermileClient} class.
     *
     * The constructor takes two arguments.
-    * @param string $api_key the API key of the client
+    * @param string $client_id the Client ID of the client
     * @param string $api_base the base URL for Evermile's API
     */
 
-   public function __construct($api_key, $api_base)
+   public function __construct($client_id, $client_secret, $merchant_id, $api_base)
    {
       $config = $this->validateConfig(array(
-         "api_key" => $api_key,
+         "client_id" => $client_id,
+         "client_secret" => $client_secret,
+         "merchant_id" => $merchant_id,
          "api_base" => $api_base
       ));
 
@@ -31,13 +33,33 @@ class BaseEvermileClient implements EvermileClientInterface
    }
 
    /**
-    * Gets the API key used by the client to send requests.
+    * Gets the Client ID used by the client to send requests.
     *
-    * @return null|string the API key used by the client to send requests
+    * @return null|string the Client ID used by the client to send requests
     */
-   public function getApiKey()
+   public function getClientID()
    {
-      return $this->config['api_key'];
+      return $this->config['client_id'];
+   }
+
+   /**
+    * Gets the Client Secret used by the client to send requests.
+    *
+    * @return null|string the Client Secret used by the client to send requests
+    */
+   public function getClientSecret()
+   {
+      return $this->config['client_secret'];
+   }
+
+   /**
+    * Gets the Merchant ID used by the client to send requests.
+    *
+    * @return null|string the Merchant ID used by the client to send requests
+    */
+   public function getMerchantID()
+   {
+      return $this->config['merchant_id'];
    }
 
    /**
@@ -49,6 +71,46 @@ class BaseEvermileClient implements EvermileClientInterface
    {
       return $this->config['api_base'];
    }
+
+   /**
+    * Get Access Token
+    *
+    * @return string the access token
+    */
+   public function getAccessToken()
+   {
+      // Combine client_id and client_secret with a colon
+      $credentials = $this->getClientID() . ':' . $this->getClientSecret();
+
+      // Base64 encode the combined string
+      $base64Credentials = base64_encode($credentials);
+
+      // Instantiate a Guzzle client
+      $client = new Client();
+
+      // Define the request parameters
+      $requestParams = [
+         'headers' => [
+            'Authorization' => 'Basic ' . $base64Credentials,
+            'Content-Type' => 'application/x-www-form-urlencoded',
+         ],
+         'form_params' => [
+            'grant_type' => 'client_credentials',
+         ],
+      ];
+
+      // Make the POST request
+      $response = $client->post('https://auth.sandbox.evermile.io/oauth2/token', $requestParams);
+
+      // Get the response body as a string
+      $responseBody = $response->getBody()->getContents();
+
+      // Decode the JSON response
+      $result = json_decode($responseBody, true);
+
+      return $result['access_token'];
+   }
+
 
    /**
     * Sends a request to Evermile's API.
@@ -64,7 +126,8 @@ class BaseEvermileClient implements EvermileClientInterface
          'headers' => [
             'accept' => 'application/json',
             'content-type' => 'application/json',
-            'API-KEY' => $this->getApiKey()
+            'Authorization' => 'Bearer ' . $this->getAccessToken(),
+            'X-EVERMILE-MERCHANT-ID' => $this->getMerchantID()
          ]
       ]);
 
@@ -85,21 +148,53 @@ class BaseEvermileClient implements EvermileClientInterface
     */
    private function validateConfig($config)
    {
-      // api_key
-      if (!isset($config['api_key'])) {
-         throw new InvalidArgumentException('api_key field is required');
+      // client_id
+      if (!isset($config['client_id'])) {
+         throw new InvalidArgumentException('client_id field is required');
       }
 
-      if (!is_string($config['api_key'])) {
-         throw new InvalidArgumentException('api_key must be a string');
+      if (!is_string($config['client_id'])) {
+         throw new InvalidArgumentException('client_id must be a string');
       }
 
-      if ('' === $config['api_key']) {
-         throw new InvalidArgumentException('api_key cannot be an empty string');
+      if ('' === $config['client_id']) {
+         throw new InvalidArgumentException('client_id cannot be an empty string');
       }
 
-      if (preg_match('/\s/', $config['api_key'])) {
-         throw new InvalidArgumentException('api_key cannot contain whitespace');
+      if (preg_match('/\s/', $config['client_id'])) {
+         throw new InvalidArgumentException('client_id cannot contain whitespace');
+      }
+
+      if (!isset($config['client_secret'])) {
+         throw new InvalidArgumentException('client_secret field is required');
+      }
+
+      if (!is_string($config['client_secret'])) {
+         throw new InvalidArgumentException('client_secret must be a string');
+      }
+
+      if ('' === $config['client_secret']) {
+         throw new InvalidArgumentException('client_secret cannot be an empty string');
+      }
+
+      if (preg_match('/\s/', $config['client_secret'])) {
+         throw new InvalidArgumentException('client_secret cannot contain whitespace');
+      }
+
+      if (!isset($config['client_secret'])) {
+         throw new InvalidArgumentException('client_secret field is required');
+      }
+
+      if (!is_string($config['merchant_id'])) {
+         throw new InvalidArgumentException('merchant_id must be a string');
+      }
+
+      if ('' === $config['merchant_id']) {
+         throw new InvalidArgumentException('merchant_id cannot be an empty string');
+      }
+
+      if (preg_match('/\s/', $config['merchant_id'])) {
+         throw new InvalidArgumentException('merchant_id cannot contain whitespace');
       }
 
       if (!isset($config['api_base'])) {
@@ -115,7 +210,9 @@ class BaseEvermileClient implements EvermileClientInterface
       }
 
       return [
-         "api_key" => $config['api_key'],
+         "client_id" => $config['client_id'],
+         "client_secret" => $config['client_secret'],
+         "merchant_id" => $config['merchant_id'],
          "api_base" => $config['api_base'],
       ];
    }
@@ -126,10 +223,7 @@ class BaseEvermileClient implements EvermileClientInterface
 
       if ($status_code >= 200 && $status_code < 300) {
          $response = json_decode($response->getBody(), true);
-         if (isset($response["data"])) {
-            return $response["data"];
-         }
-         throw new Exception("Data node not set in server response");
+         return $response;
       } else {
          $response = json_decode($response->getBody(), true);
          if (isset($response["errors"])) {

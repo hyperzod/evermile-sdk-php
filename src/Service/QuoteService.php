@@ -4,10 +4,10 @@ namespace Hyperzod\EvermileSdkPhp\Service;
 
 use Hyperzod\EvermileSdkPhp\Enums\HttpMethodEnum;
 
-class JobService extends AbstractService
+class QuoteService extends AbstractService
 {
    /**
-    * Create a job on Evermile
+    * Create a Quote on Evermile
     *
     * @param array $params
     *
@@ -16,6 +16,6 @@ class JobService extends AbstractService
     */
    public function create(array $params)
    {
-      return $this->request(HttpMethodEnum::POST, '/jobs', $params);
+      return $this->request(HttpMethodEnum::POST, '/quote', $params);
    }
 }
