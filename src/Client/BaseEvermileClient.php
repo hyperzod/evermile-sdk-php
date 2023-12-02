@@ -99,8 +99,12 @@ class BaseEvermileClient implements EvermileClientInterface
          ],
       ];
 
+      $authTokenUrl = "https://auth.prod.evermile.io/oauth2/token";
+      if (strpos($this->getApiBase(), 'sandbox') !== false) {
+         $authTokenUrl = "https://auth.sandbox.evermile.io/oauth2/token";
+      }
       // Make the POST request
-      $response = $client->post('https://auth.sandbox.evermile.io/oauth2/token', $requestParams);
+      $response = $client->post($authTokenUrl, $requestParams);
 
       // Get the response body as a string
       $responseBody = $response->getBody()->getContents();
